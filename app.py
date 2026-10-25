@@ -1,4 +1,3 @@
-```python
 import os
 import streamlit as st
 from bokeh.models.widgets import Button
