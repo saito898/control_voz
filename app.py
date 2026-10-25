@@ -63,7 +63,7 @@ section[data-testid="stSidebar"] {
 }
 
 .block-container {
-    max-width: 1120px;
+    max-width: 1000px;
     padding-top: 2rem;
     padding-bottom: 3rem;
 }
