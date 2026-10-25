@@ -1,12 +1,13 @@
-
-import os
-import streamlit as st
-from bokeh.models.widgets import Button
-from bokeh.models import CustomJS
-from streamlit_bokeh_events import streamlit_bokeh_events
+import html
 import time
-import paho.mqtt.client as paho
 import json
+import streamlit as st
+import paho.mqtt.client as paho
+
+from bokeh.models import CustomJS
+from bokeh.models.widgets import Button
+from streamlit_bokeh_events import streamlit_bokeh_events
+
 
 # =====================================================
 # CONFIGURACIÓN DE LA PÁGINA
@@ -19,24 +20,18 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+
 # =====================================================
 # CONFIGURACIÓN MQTT
 # =====================================================
 
-def on_publish(client, userdata, result):
-    print("El dato ha sido publicado")
+BROKER = "broker.mqttdashboard.com"
+PORT = 1883
+TOPIC = "voice_ctrl"
 
-
-def on_message(client, userdata, message):
-    global message_received
-    message_received = str(message.payload.decode("utf-8"))
-
-
-broker = "broker.mqttdashboard.com"
-port = 1883
 
 # =====================================================
-# ESTILOS
+# ESTILOS CSS
 # =====================================================
 
 st.markdown("""
@@ -46,9 +41,9 @@ st.markdown("""
 .stApp {
     background:
         radial-gradient(circle at 10% 5%,
-        rgba(119, 94, 255, 0.17), transparent 30%),
+            rgba(119, 94, 255, 0.17), transparent 30%),
         radial-gradient(circle at 95% 30%,
-        rgba(44, 207, 230, 0.10), transparent 28%),
+            rgba(44, 207, 230, 0.10), transparent 28%),
         #0b1020;
     color: #f3f4ff;
     font-family: 'DM Sans', sans-serif;
@@ -58,7 +53,8 @@ header[data-testid="stHeader"] {
     background: transparent;
 }
 
-#MainMenu, footer {
+#MainMenu,
+footer {
     visibility: hidden;
 }
 
@@ -76,7 +72,7 @@ section[data-testid="stSidebar"] {
 
 .hero {
     text-align: center;
-    padding: 38px 10px 32px 10px;
+    padding: 35px 10px 30px;
 }
 
 .badge {
@@ -89,18 +85,17 @@ section[data-testid="stSidebar"] {
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 2px;
-    text-transform: uppercase;
     margin-bottom: 22px;
 }
 
-.hero h1 {
+.hero-title {
     font-family: 'Manrope', sans-serif;
     font-size: clamp(38px, 6vw, 62px);
     font-weight: 800;
-    line-height: 1.12;
+    line-height: 1.15;
     letter-spacing: -2px;
     color: #f6f5ff;
-    margin: 0 0 18px 0;
+    margin: 0 0 18px;
 }
 
 .gradient-text {
@@ -109,9 +104,9 @@ section[data-testid="stSidebar"] {
     -webkit-text-fill-color: transparent;
 }
 
-.hero p {
+.hero-description {
     max-width: 620px;
-    margin: auto;
+    margin: 0 auto;
     font-size: 16px;
     line-height: 1.8;
     color: #aab6d1;
@@ -123,7 +118,7 @@ section[data-testid="stSidebar"] {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 14px;
-    margin: 15px 0 35px 0;
+    margin: 15px 0 35px;
 }
 
 .metric {
@@ -141,10 +136,10 @@ section[data-testid="stSidebar"] {
 
 .metric-label {
     color: #8190b3;
-    text-transform: uppercase;
     letter-spacing: 1.5px;
     font-size: 10px;
     margin-bottom: 7px;
+    text-transform: uppercase;
 }
 
 .metric-value {
@@ -197,7 +192,7 @@ section[data-testid="stSidebar"] {
     line-height: 1.8;
 }
 
-/* BOTÓN STREAMLIT */
+/* BOTONES */
 
 .stButton > button {
     width: 100%;
@@ -216,16 +211,6 @@ section[data-testid="stSidebar"] {
     color: white;
     border-color: #c6beff;
     transform: translateY(-1px);
-}
-
-/* CAMPOS */
-
-.stTextInput input,
-.stTextArea textarea {
-    background: #101a2e !important;
-    color: white !important;
-    border: 1px solid rgba(164, 177, 255, 0.22) !important;
-    border-radius: 10px !important;
 }
 
 /* TRANSCRIPCIÓN */
@@ -273,475 +258,8 @@ section[data-testid="stSidebar"] {
     line-height: 1.7;
 }
 
-/* INFORMACIÓN MQTT */
+/* CONEXIÓN */
 
 .connection {
     background: rgba(100, 227, 242, 0.05);
-    border: 1px solid rgba(100, 227, 242, 0.19);
-    border-radius: 15px;
-    padding: 19px;
-    margin-top: 18px;
-}
-
-.connection-title {
-    color: #70e2f0;
-    font-weight: 700;
-    font-size: 14px;
-    margin-bottom: 12px;
-}
-
-.connection-line {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 7px 0;
-    font-size: 12px;
-    border-bottom: 1px solid rgba(100, 227, 242, 0.09);
-}
-
-.connection-line:last-child {
-    border-bottom: none;
-}
-
-.connection-label {
-    color: #8d9bb9;
-}
-
-.connection-value {
-    color: #dce8ff;
-    text-align: right;
-    overflow-wrap: anywhere;
-}
-
-/* PIE DE PÁGINA */
-
-.footer {
-    text-align: center;
-    color: #7281a2;
-    font-size: 12px;
-    line-height: 2;
-    padding-top: 25px;
-    margin-top: 35px;
-    border-top: 1px solid rgba(164, 177, 255, 0.13);
-}
-
-@media (max-width: 650px) {
-    .metrics {
-        grid-template-columns: 1fr;
-    }
-
-    .card {
-        padding: 19px;
-    }
-}
-</style>
-""", unsafe_allow_html=True)
-
-# =====================================================
-# ENCABEZADO
-# =====================================================
-
-st.markdown("""
-<div class="hero">
-    <div class="badge">✦ Interfaces multimodales</div>
-
-    <h1>
-        Tu voz,<br>
-        <span class="gradient-text">tus comandos.</span>
-    </h1>
-
-    <p>
-        Una nueva forma de interactuar con la tecnología.
-        Habla con naturalidad, reconoce tus palabras y
-        transmite instrucciones mediante comunicación MQTT.
-    </p>
-</div>
-""", unsafe_allow_html=True)
-
-# =====================================================
-# INDICADORES
-# =====================================================
-
-st.markdown("""
-<div class="metrics">
-    <div class="metric">
-        <div class="metric-icon">🎙️</div>
-        <div class="metric-label">Entrada</div>
-        <div class="metric-value">Reconocimiento de voz</div>
-    </div>
-
-    <div class="metric">
-        <div class="metric-icon">💬</div>
-        <div class="metric-label">Procesamiento</div>
-        <div class="metric-value">Texto reconocido</div>
-    </div>
-
-    <div class="metric">
-        <div class="metric-icon">📡</div>
-        <div class="metric-label">Comunicación</div>
-        <div class="metric-value">Protocolo MQTT</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# =====================================================
-# CONTENIDO PRINCIPAL
-# =====================================================
-
-col_voz, col_info = st.columns([1.15, 0.85], gap="large")
-
-# =====================================================
-# PANEL DE VOZ
-# =====================================================
-
-with col_voz:
-
-    st.markdown("""
-    <div class="card">
-        <div class="card-heading">
-            <span class="step">01</span>
-            Estudio de voz
-        </div>
-
-        <div class="card-description">
-            Pulsa el botón para activar el reconocimiento.
-            Pronuncia tu comando con claridad y espera a que
-            aparezca la transcripción.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div style="
-        text-align:center;
-        padding:22px 10px 28px 10px;
-    ">
-        <div style="
-            width:112px;
-            height:112px;
-            margin:auto;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            border-radius:50%;
-            background:linear-gradient(
-                145deg,
-                rgba(139,124,255,0.23),
-                rgba(100,227,242,0.10)
-            );
-            border:1px solid rgba(166,155,255,0.35);
-            box-shadow:0 0 45px rgba(139,124,255,0.12);
-            font-size:47px;
-        ">
-            🎙️
-        </div>
-
-        <div style="
-            color:#e9eaff;
-            font-size:18px;
-            font-weight:700;
-            margin-top:20px;
-        ">
-            Tu voz es el control
-        </div>
-
-        <div style="
-            color:#8998b8;
-            font-size:13px;
-            margin-top:7px;
-        ">
-            Habla para comenzar la interacción
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    stt_button = Button(
-        label="🎙️  Iniciar reconocimiento de voz",
-        width=360,
-        height=55,
-        button_type="primary"
-    )
-
-    stt_button.js_on_event(
-        "button_click",
-        CustomJS(code="""
-            var SpeechRecognition =
-                window.SpeechRecognition ||
-                window.webkitSpeechRecognition;
-
-            if (!SpeechRecognition) {
-                document.dispatchEvent(
-                    new CustomEvent("GET_TEXT", {
-                        detail: "ERROR_BROWSER_NO_COMPATIBLE"
-                    })
-                );
-            } else {
-                var recognition = new SpeechRecognition();
-
-                recognition.lang = "es-CO";
-                recognition.continuous = false;
-                recognition.interimResults = false;
-
-                recognition.onresult = function(e) {
-                    var value = e.results[0][0].transcript;
-
-                    if (value != "") {
-                        document.dispatchEvent(
-                            new CustomEvent("GET_TEXT", {
-                                detail: value
-                            })
-                        );
-                    }
-                };
-
-                recognition.onerror = function(e) {
-                    document.dispatchEvent(
-                        new CustomEvent("GET_TEXT", {
-                            detail: "ERROR_VOZ_" + e.error
-                        })
-                    );
-                };
-
-                recognition.start();
-            }
-        """)
-    )
-
-    result = streamlit_bokeh_events(
-        stt_button,
-        events="GET_TEXT",
-        key="listen",
-        refresh_on_update=True,
-        override_height=75,
-        debounce_time=0
-    )
-
-    if "ultimo_texto" not in st.session_state:
-        st.session_state.ultimo_texto = ""
-
-    if "ultimo_envio" not in st.session_state:
-        st.session_state.ultimo_envio = ""
-
-    if result and "GET_TEXT" in result:
-
-        texto = str(result.get("GET_TEXT", "")).strip()
-
-        if texto == "ERROR_BROWSER_NO_COMPATIBLE":
-            st.error(
-                "Tu navegador no admite el reconocimiento de voz. "
-                "Prueba con Google Chrome."
-            )
-
-        elif texto.startswith("ERROR_VOZ_"):
-            st.error(
-                "No se pudo reconocer la voz. Detalle: "
-                + texto.replace("ERROR_VOZ_", "")
-            )
-
-        elif texto:
-            st.session_state.ultimo_texto = texto
-
-    st.write("")
-
-    if st.session_state.ultimo_texto:
-
-        st.markdown("""
-        <div class="card-heading">
-            <span class="step">02</span>
-            Comando reconocido
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown(
-            '<div class="transcription">'
-            + st.session_state.ultimo_texto.replace(
-                "&", "&amp;"
-            ).replace(
-                "<", "&lt;"
-            ).replace(
-                ">", "&gt;"
-            )
-            + '</div>',
-            unsafe_allow_html=True
-        )
-
-        st.write("")
-
-        if st.button(
-            "↗  Enviar comando por MQTT",
-            key="enviar_mqtt",
-            use_container_width=True
-        ):
-
-            cliente = None
-
-            try:
-                with st.spinner("Transmitiendo comando..."):
-
-                    client_id = (
-                        "control_voz_"
-                        + str(int(time.time() * 1000))
-                    )
-
-                    try:
-                        cliente = paho.Client(
-                            callback_api_version=(
-                                paho.CallbackAPIVersion.VERSION1
-                            ),
-                            client_id=client_id
-                        )
-                    except (AttributeError, TypeError):
-                        cliente = paho.Client(
-                            client_id=client_id
-                        )
-
-                    cliente.connect(broker, port, 30)
-                    cliente.loop_start()
-
-                    mensaje = json.dumps({
-                        "Act1": st.session_state.ultimo_texto.strip()
-                    }, ensure_ascii=False)
-
-                    info = cliente.publish(
-                        "voice_ctrl",
-                        mensaje
-                    )
-
-                    info.wait_for_publish(timeout=10)
-
-                    if info.is_published():
-
-                        st.session_state.ultimo_envio = (
-                            st.session_state.ultimo_texto
-                        )
-
-                        st.success("¡Comando enviado correctamente!")
-
-                        st.markdown("""
-                        <div class="card-description">
-                            El mensaje fue publicado en el tema MQTT.
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                        st.json(json.loads(mensaje))
-
-                    else:
-                        st.warning(
-                            "No se pudo confirmar la publicación del mensaje."
-                        )
-
-            except Exception as error:
-                st.error("No fue posible enviar el comando por MQTT.")
-                st.caption(f"Detalle técnico: {error}")
-
-            finally:
-                if cliente is not None:
-                    try:
-                        cliente.loop_stop()
-                        cliente.disconnect()
-                    except Exception:
-                        pass
-
-        if st.session_state.ultimo_envio:
-            st.caption(
-                "Último comando enviado: "
-                + st.session_state.ultimo_envio
-            )
-
-    else:
-        st.info(
-            "Tu transcripción aparecerá aquí después de hablar."
-        )
-
-# =====================================================
-# PANEL INFORMATIVO
-# =====================================================
-
-with col_info:
-
-    st.markdown("""
-    <div class="card">
-        <div class="card-heading">
-            <span class="step">✦</span>
-            ¿Cómo funciona?
-        </div>
-
-        <div class="card-description">
-            Tres pasos conectan tu voz con un dispositivo
-            capaz de interpretar tus instrucciones.
-        </div>
-
-        <div class="instruction">
-            <div class="instruction-icon">🎧</div>
-            <div>
-                <div class="instruction-title">01 · Habla</div>
-                <div class="instruction-text">
-                    Activa el micrófono y pronuncia
-                    la instrucción que deseas transmitir.
-                </div>
-            </div>
-        </div>
-
-        <div class="instruction">
-            <div class="instruction-icon">💬</div>
-            <div>
-                <div class="instruction-title">02 · Reconoce</div>
-                <div class="instruction-text">
-                    El navegador convierte tu voz en texto
-                    y te permite revisar el comando.
-                </div>
-            </div>
-        </div>
-
-        <div class="instruction">
-            <div class="instruction-icon">⚡</div>
-            <div>
-                <div class="instruction-title">03 · Transmite</div>
-                <div class="instruction-text">
-                    El mensaje se publica en el tema MQTT
-                    para que un dispositivo suscrito pueda recibirlo.
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="connection">
-        <div class="connection-title">
-            ◉ Información de conexión
-        </div>
-
-        <div class="connection-line">
-            <span class="connection-label">Broker</span>
-            <span class="connection-value">
-                broker.mqttdashboard.com
-            </span>
-        </div>
-
-        <div class="connection-line">
-            <span class="connection-label">Puerto</span>
-            <span class="connection-value">1883</span>
-        </div>
-
-        <div class="connection-line">
-            <span class="connection-label">Tema MQTT</span>
-            <span class="connection-value">voice_ctrl</span>
-        </div>
-
-        <div class="connection-line">
-            <span class="connection-label">Formato</span>
-            <span class="connection-value">JSON</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# =====================================================
-# PIE DE PÁGINA
-# =====================================================
-
-st.markdown("""
-<div class="footer">
-    INTERFACES MULTIMODALES<br>
-    CONTROL POR VOZ · COMUNICACIÓN MQTT<br>
-    Conectando la voz con el mundo físico.
-</div>
-""", unsafe_allow_html=True)
+    border: 1px solid rgba(100, 227, 242, 0.19
